@@ -1,0 +1,30 @@
+services:
+  backend:
+    build:
+      context: .
+      dockerfile: backend/Dockerfile
+    environment:
+      DATABASE_PATH: /app/data/wind.sqlite3
+      DEFAULT_CUTOFF: ${DEFAULT_CUTOFF:-09:00}
+      LIVE_REFRESH_ENABLED: ${LIVE_REFRESH_ENABLED:-true}
+      REFRESH_INTERVAL_SECONDS: ${REFRESH_INTERVAL_SECONDS:-900}
+      CACHE_HISTORY_DAYS: ${CACHE_HISTORY_DAYS:-120}
+      ELEXON_API_BASE: ${ELEXON_API_BASE:-https://data.elexon.co.uk/bmrs/api/v1}
+      DATA_START: ${DATA_START:-2025-12-24}
+      DATA_END: ${DATA_END:-2026-01-31}
+    volumes:
+      - ./backend/data:/app/data
+    ports:
+      - "8000:8000"
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8000/api/health')"]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+  frontend:
+    build: ./frontend
+    depends_on:
+      backend:
+        condition: service_healthy
+    ports:
+      - "5173:80"
